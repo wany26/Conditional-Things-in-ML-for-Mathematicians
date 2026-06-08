@@ -1,0 +1,1669 @@
+% =====================================================================
+%  Conditional Things in ML for Mathematicians
+%  A handbook on the rigorous meaning of conditional notation in ML.
+%  Compile:  pdflatex main.tex  (run twice for TOC/refs)
+% =====================================================================
+\documentclass[11pt,oneside]{report}
+
+% ---- page geometry & fonts ----
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ---- math ----
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}      % \DeclarePairedDelimiter, \coloneqq, etc.
+\usepackage{mathrsfs}       % \mathscr
+\usepackage{bm}
+
+% ---- layout / misc ----
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage[bottom]{footmisc}
+\usepackage{emptypage}
+
+% ---- hyperref must be (nearly) last ----
+\usepackage[colorlinks=true,linkcolor=black!75!blue,citecolor=black,
+            urlcolor=blue!60!black,linktoc=all]{hyperref}
+
+% =====================================================================
+%  Theorem environments
+% =====================================================================
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{convention}[theorem]{Convention}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{warning}[theorem]{Warning}
+\newtheorem*{warning*}{\textbf{Pitfall}}
+
+% A lightweight environment for the symbol-dictionary entries (Part VI).
+\newenvironment{mlentry}[1]%
+  {\par\medskip\noindent\textbf{Symbol.}\quad #1\par\nobreak\smallskip}%
+  {\par\medskip\hrule height0pt\medskip}
+
+% =====================================================================
+%  Macros
+% =====================================================================
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\one}{\mathbf{1}}                 % indicator
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\Fcal}{\mathcal{F}}
+\newcommand{\Gcal}{\mathcal{G}}
+\newcommand{\Hcal}{\mathcal{H}}
+\newcommand{\Bcal}{\mathcal{B}}
+\newcommand{\Xcal}{\mathcal{X}}
+\newcommand{\Ycal}{\mathcal{Y}}
+\newcommand{\Zcal}{\mathcal{Z}}
+\newcommand{\Dcal}{\mathcal{D}}
+\newcommand{\eqas}{\overset{\text{a.s.}}{=}}
+\newcommand{\defeq}{\vcentcolon=}
+\newcommand{\given}{\,\vert\,}
+\newcommand{\biggiven}{\,\middle\vert\,}
+
+% independence / conditional independence
+\newcommand{\indep}{\mathrel{\perp\mkern-10mu\perp}}
+
+% operators
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Cor}{Cor}
+\DeclareMathOperator{\KL}{KL}
+\DeclareMathOperator{\supp}{supp}
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator{\Ent}{H}        % entropy
+\DeclareMathOperator{\MI}{I}         % mutual information
+\DeclareMathOperator{\diffent}{h}    % differential entropy
+
+% paired delimiters
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\DeclarePairedDelimiter{\inner}{\langle}{\rangle}
+
+% conditional expectation with a nice scalable bar:  \cE{X}{\Gcal}
+\newcommand{\cE}[2]{\E\!\left[\,#1 \,\middle|\, #2\,\right]}
+\newcommand{\cProb}[2]{\Prob\!\left(\,#1 \,\middle|\, #2\,\right)}
+\newcommand{\cVar}[2]{\Var\!\left(\,#1 \,\middle|\, #2\,\right)}
+
+\allowdisplaybreaks
+\numberwithin{equation}{chapter}
+
+% =====================================================================
+\begin{document}
+
+% ---------------------------------------------------------------------
+%  Title page
+% ---------------------------------------------------------------------
+\begin{titlepage}
+\centering
+\vspace*{3.5cm}
+{\Huge\bfseries Conditional Things in ML\\[0.35em] for Mathematicians\par}
+\vspace{1.2cm}
+{\Large A Rigorous Handbook of the Conditional Notation\\
+Used in Machine-Learning Theses\par}
+\vfill
+{\large A measure-theoretic reading of $\;\Prob(A\given B),\quad
+\cE{X}{\Gcal},\quad p(x\given y),\quad X\indep Y\given Z,\quad
+H(X\given Y),\quad \nabla_x\log p_t(x\given y).$\par}
+\vfill
+{\large From conditional probability to classifier-free guidance,\\
+with every bar ``$\,\vert\,$'' given a definition.\par}
+\vspace{2cm}
+{\large\today\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+
+% ---------------------------------------------------------------------
+%  Preface
+% ---------------------------------------------------------------------
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+\markboth{Preface}{Preface}
+
+Machine-learning papers are written in a dialect of probability theory in
+which the vertical bar ``$\,\vert\,$'' is the busiest symbol on the page.
+A single thesis may, within three paragraphs, write the conditional
+density $p(x\given y)$, the conditional expectation $\E[X\given Y]$, the
+amortized variational posterior $q_\phi(z\given x)$, the policy
+$\pi(a\given s)$, and the conditional score $\nabla_x\log p_t(x\given y)$
+--- and treat all of them as if their meaning were self-evident. For a
+reader trained in measure theory this is disorienting: the same glyph
+denotes a number, a function, a random variable, a Markov kernel, and a
+Radon--Nikodym derivative, depending on context that is rarely stated.
+
+This handbook is a translation manual. Its purpose is to take every
+common piece of \emph{conditional} notation that a mathematician will
+meet in an ML thesis and attach to it a single, unambiguous,
+measure-theoretic definition, together with the theorem that guarantees
+the object exists, the sense in which it is unique, and the pitfalls that
+the informal notation hides.
+
+\paragraph{Who this is for.}
+The intended reader knows graduate real analysis and measure-theoretic
+probability at the level of, say, the first chapters of Williams'
+\emph{Probability with Martingales} or Durrett's \emph{Probability:
+Theory and Examples}: $\sigma$-algebras, the Lebesgue integral, product
+measures, Radon--Nikodym, and the basic convergence theorems are assumed.
+No prior machine learning is assumed. Where an ML construction (a VAE, a
+diffusion model, an MDP) is needed, it is introduced from its probabilistic
+skeleton only, with enough detail to fix the notation and not one symbol more.
+
+\paragraph{What this is not.}
+It is not a machine-learning textbook, an optimization reference, or a
+survey of architectures. Approximation, estimation, and computation ---
+the parts of ML that are genuinely about \emph{learning} --- appear only
+insofar as they are needed to explain what a symbol denotes. We are
+concerned with what the notation \emph{means}, not with how well a network
+fits it.
+
+\paragraph{Standing conventions.}
+Unless stated otherwise, $(\Omega,\Fcal,\Prob)$ is a fixed probability
+space; random variables are measurable maps out of it; ``a.s.'' means
+$\Prob$-almost surely; and all named random variables are assumed to take
+values in standard Borel (Polish, with their Borel $\sigma$-algebra)
+spaces, which is exactly the hypothesis that makes regular conditional
+distributions exist (Chapter~\ref{ch:cond-dist}). Densities are taken with
+respect to a reference measure --- Lebesgue on $\R^d$ or counting measure
+on a discrete set --- that we name when it matters and suppress when it
+does not. A short index of recurring symbols is collected in
+Appendix~\ref{app:cheatsheet}.
+
+\paragraph{How to read it.}
+Parts~\ref{part:foundations}--\ref{part:info} build the rigorous objects
+in order of dependence: conditional expectation, then conditional
+distributions and densities, then conditional independence, then the
+information-theoretic conditionals. Part~\ref{part:dictionary} is a
+dictionary: each entry takes a symbol \emph{as it is actually printed in
+papers} and points back to the definition that licenses it. A reader who
+only wants to decode a particular formula can start there and follow the
+cross-references inward.
+
+\vspace{1em}
+\noindent\emph{A note on rigor and honesty.} Several identities that ML
+papers write with an equals sign are, strictly, only true almost surely,
+or only after a regular version has been fixed, or only under an absolute-continuity
+hypothesis that is left implicit. Rather than smooth these over, the
+handbook flags them, because the gap between ``$=$'' and ``$\eqas$'' is
+exactly where a mathematician's intuition is most likely to be misled.
+
+\cleardoublepage
+\pagenumbering{arabic}
+
+% =====================================================================
+\part{Foundations and Conditional Expectation}\label{part:foundations}
+% =====================================================================
+
+\chapter{Why elementary conditioning is not enough}\label{ch:why}
+
+\section{The schoolbook definition and where it breaks}
+
+Every reader knows the elementary definition.
+
+\begin{definition}[Elementary conditional probability]\label{def:elem-cond}
+Let $(\Omega,\Fcal,\Prob)$ be a probability space and $B\in\Fcal$ an event
+with $\Prob(B)>0$. For $A\in\Fcal$,
+\begin{equation}\label{eq:elem-cond}
+  \cProb{A}{B}\;\defeq\;\frac{\Prob(A\cap B)}{\Prob(B)}.
+\end{equation}
+\end{definition}
+
+For fixed $B$ with $\Prob(B)>0$ the set function $A\mapsto\cProb{A}{B}$ is
+a bona fide probability measure on $(\Omega,\Fcal)$, and
+$\cE{X}{B}\defeq\Prob(B)^{-1}\int_B X\dd\Prob$ is its expectation operator.
+Nothing here is subtle. The trouble is that essentially every conditional
+quantity in machine learning conditions on an event of probability zero.
+
+\begin{example}[The event we actually want has probability zero]
+\label{ex:zero}
+Let $(X,Y)$ be jointly continuous on $\R^2$, e.g.\ $Y\sim\mathcal N(0,1)$
+and $X\given Y$ Gaussian. The object an ML paper denotes $p(x\given y)$,
+$\cE{X}{Y=y}$, or $\Prob(X\in A\given Y=y)$ conditions on the event
+$\{Y=y\}$, which has $\Prob(Y=y)=0$. Formula~\eqref{eq:elem-cond} returns
+$\tfrac{0}{0}$. The symbol is in universal use and the schoolbook
+definition cannot assign it a value.
+\end{example}
+
+The naive repair --- ``condition on $\{y-\varepsilon<Y<y+\varepsilon\}$ and
+let $\varepsilon\to0$'' --- can be made to work, but its answer depends on
+\emph{how} the limiting family of events is chosen. That dependence is not
+a technicality; it is a genuine ambiguity with a name.
+
+\begin{warning*}[The Borel--Kolmogorov paradox, previewed]
+Conditioning on a measure-zero event $\{Y=y\}$ has no answer until one
+specifies the \emph{family} of shrinking events used to approach it.
+Different parameterizations of the same null event yield different
+``conditional distributions.'' We treat this carefully in
+Section~\ref{sec:bk-paradox}; for now it is the warning that motivates
+everything below. The resolution is to stop conditioning on a single
+event and instead condition on a $\sigma$-algebra, obtaining an object
+defined only up to almost-sure equivalence.
+\end{warning*}
+
+\section{The shift in viewpoint}
+
+Measure-theoretic conditioning makes three moves at once, and a
+mathematician new to the ML literature should hold all three in mind.
+
+\begin{enumerate}[label=(\roman*),leftmargin=2.2em]
+\item \textbf{Condition on information, not on an event.} The primitive is
+a sub-$\sigma$-algebra $\Gcal\subseteq\Fcal$ --- ``everything we are
+allowed to know.'' Conditioning on a random variable $Y$ means
+conditioning on $\Gcal=\sigma(Y)$.
+\item \textbf{The answer is a random variable, not a number.}
+$\cE{X}{\Gcal}$ is itself a $\Gcal$-measurable random variable; evaluating
+it ``at $Y=y$'' is a secondary, and more delicate, operation
+(Section~\ref{sec:cond-on-rv}).
+\item \textbf{Identities hold almost surely.} The defining property pins
+down $\cE{X}{\Gcal}$ only up to a $\Prob$-null set. Every ``$=$'' between
+conditional objects is, by default, an ``$\eqas$''.
+\end{enumerate}
+
+The remainder of Part~\ref{part:foundations} develops move (i)--(iii) into
+Kolmogorov's definition of conditional expectation, from which conditional
+probability, conditional variance, and (in Part~\ref{part:cond-dist}) the
+conditional densities and kernels of the ML literature are all derived as
+special cases.
+
+% =====================================================================
+\part{Conditional Expectation}\label{part:cond-exp}
+% =====================================================================
+
+\chapter{Conditional expectation given a \texorpdfstring{$\sigma$}{sigma}-algebra}
+\label{ch:cond-exp}
+
+\section{Kolmogorov's definition}
+
+\begin{definition}[Conditional expectation]\label{def:cond-exp}
+Let $X\in L^1(\Omega,\Fcal,\Prob)$ and let $\Gcal\subseteq\Fcal$ be a
+sub-$\sigma$-algebra. A \emph{version of the conditional expectation of
+$X$ given $\Gcal$} is any random variable $Z$ satisfying
+\begin{enumerate}[label=(CE\arabic*),leftmargin=3.2em]
+\item $Z$ is $\Gcal$-measurable;\label{ce:meas}
+\item $Z\in L^1(\Prob)$, and for every $G\in\Gcal$,
+      \begin{equation}\label{eq:ce-defining}
+        \int_G Z\dd\Prob \;=\; \int_G X\dd\Prob .
+      \end{equation}
+\end{enumerate}
+Any such $Z$ is written $\cE{X}{\Gcal}$.
+\end{definition}
+
+Property~\ref{ce:meas} says $Z$ uses only the information in $\Gcal$;
+property~\eqref{eq:ce-defining} says $Z$ has the same ``local averages'' as
+$X$ over every event we can resolve with $\Gcal$. Note what is \emph{not}
+required: no pointwise relation between $Z(\omega)$ and $X(\omega)$ holds,
+only an averaged one.
+
+\begin{theorem}[Existence and a.s.\ uniqueness]\label{thm:ce-exists}
+For every $X\in L^1(\Prob)$ and every sub-$\sigma$-algebra
+$\Gcal\subseteq\Fcal$ a version $\cE{X}{\Gcal}$ exists, and any two
+versions agree $\Prob$-almost surely.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+\emph{Existence.} Assume first $X\ge 0$. Define a finite measure on
+$(\Omega,\Gcal)$ by $\nu(G)\defeq\int_G X\dd\Prob$. Then $\nu\ll\Prob|_\Gcal$,
+since $\Prob(G)=0\Rightarrow\nu(G)=0$. By the Radon--Nikodym theorem
+(Theorem~\ref{thm:rn}) applied on the measurable space $(\Omega,\Gcal)$
+there is a $\Gcal$-measurable density $Z=\dd\nu/\dd(\Prob|_\Gcal)$, which is
+exactly~\eqref{eq:ce-defining}. For general $X$ set
+$\cE{X}{\Gcal}=\cE{X^+}{\Gcal}-\cE{X^-}{\Gcal}$.
+
+\emph{Uniqueness.} If $Z,Z'$ both satisfy~\eqref{eq:ce-defining}, then
+$\int_G(Z-Z')\dd\Prob=0$ for all $G\in\Gcal$. Taking
+$G=\{Z-Z'>0\}\in\Gcal$ forces $\Prob(Z>Z')=0$, and symmetrically; hence
+$Z\eqas Z'$.
+\end{proof}
+
+\begin{convention}[``The'' conditional expectation]
+Because versions differ only on a null set, one speaks of \emph{the}
+conditional expectation and writes $\cE{X}{\Gcal}$ for an arbitrary
+version, with all ensuing equalities understood $\Prob$-a.s. When a
+statement is made for a \emph{specific} version (as in the regular
+conditional distributions of Chapter~\ref{ch:cond-dist}), we say so
+explicitly.
+\end{convention}
+
+\begin{remark}[$L^2$ projection picture]\label{rem:l2-proj}
+If $X\in L^2(\Prob)$ then $L^2(\Omega,\Gcal,\Prob)$ is a closed subspace of
+$L^2(\Omega,\Fcal,\Prob)$, and $\cE{X}{\Gcal}$ is exactly the orthogonal
+projection of $X$ onto it. Equivalently it solves
+\begin{equation}
+  \cE{X}{\Gcal}\;=\;\argmin_{\substack{Z\ \Gcal\text{-meas.}\\ Z\in L^2}}
+     \;\E\bigl[(X-Z)^2\bigr],
+\end{equation}
+the \emph{best mean-square predictor of $X$ from the information
+$\Gcal$.} This is the identity that ML's ``the regression function
+$\E[Y\given X{=}\,\cdot\,]$ minimizes squared error'' is quoting, and it is
+the cleanest one-line answer to ``what is conditional expectation?'' for
+an analyst: it is a projection.
+\end{remark}
+
+\section{The calculus of conditional expectation}\label{sec:ce-calculus}
+
+The following properties are used constantly --- usually silently --- in
+ML derivations (the ELBO, policy-gradient identities, the tower rule
+behind bootstrapping in reinforcement learning). All equalities are
+$\Prob$-a.s.; all random variables are in $L^1$ unless a moment is named.
+
+\begin{proposition}[Elementary properties]\label{prop:ce-props}
+Let $\Gcal,\Hcal\subseteq\Fcal$ be sub-$\sigma$-algebras and $a,b\in\R$.
+\begin{enumerate}[label=\textup{(\arabic*)},leftmargin=2.4em]
+\item \textup{(Linearity)} $\cE{aX+bY}{\Gcal}=a\cE{X}{\Gcal}+b\cE{Y}{\Gcal}$.
+\item \textup{(Monotonicity)} $X\le Y$ a.s.\ $\Rightarrow
+      \cE{X}{\Gcal}\le\cE{Y}{\Gcal}$; in particular
+      $\bigl|\cE{X}{\Gcal}\bigr|\le\cE{\abs{X}}{\Gcal}$.
+\item \textup{(Total expectation)} $\E\bigl[\cE{X}{\Gcal}\bigr]=\E[X]$,
+      taking $G=\Omega$ in~\eqref{eq:ce-defining}.
+\item \textup{(Tower / iterated expectations)} if $\Hcal\subseteq\Gcal$ then
+      \begin{equation}\label{eq:tower}
+        \cE{\,\cE{X}{\Gcal}\,}{\Hcal}\;=\;\cE{X}{\Hcal}
+        \;=\;\cE{\,\cE{X}{\Hcal}\,}{\Gcal}.
+      \end{equation}
+\item \textup{(Taking out what is known)} if $Y$ is $\Gcal$-measurable and
+      $XY\in L^1$ (e.g.\ $Y$ bounded), then
+      \begin{equation}\label{eq:take-out}
+        \cE{YX}{\Gcal}\;=\;Y\,\cE{X}{\Gcal}.
+      \end{equation}
+\item \textup{(Independence drops the conditioning)} if $\sigma(X)$ is
+      independent of $\Gcal$, then $\cE{X}{\Gcal}=\E[X]$ (a constant).
+\item \textup{(Conditional Jensen)} if $\varphi:\R\to\R$ is convex and
+      $\varphi(X)\in L^1$, then
+      \begin{equation}\label{eq:cond-jensen}
+        \varphi\!\bigl(\cE{X}{\Gcal}\bigr)\;\le\;\cE{\varphi(X)}{\Gcal}.
+      \end{equation}
+      With $\varphi(t)=\abs{t}^p$ ($p\ge1$) this gives the conditional
+      $L^p$ contraction $\bigl\|\cE{X}{\Gcal}\bigr\|_p\le\norm{X}_p$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}[Notes on proof]
+(1)--(3) are immediate from Definition~\ref{def:cond-exp}. For the tower
+rule, the left equality holds because $\cE{X}{\Hcal}$ is $\Hcal$-measurable
+and satisfies~\eqref{eq:ce-defining} over $\Hcal\subseteq\Gcal$; the right
+equality is~\eqref{eq:ce-defining} read for $\Hcal$. Property~(5) is proved
+first for $Y=\one_{G_0}$, $G_0\in\Gcal$ (both sides integrate to
+$\int_{G\cap G_0}X$ over $G\in\Gcal$), then extended by linearity and
+monotone/dominated convergence. Property~(7) follows from the unconditional
+Jensen inequality applied to the probability measures $\cProb{\cdot}{\Gcal}$
+of Chapter~\ref{ch:cond-dist}, or directly via suprema of affine minorants
+of $\varphi$.
+\end{proof}
+
+\begin{remark}[Why ML cares about the tower rule]
+The identity~\eqref{eq:tower} is the backbone of \emph{bootstrapping}.
+In reinforcement learning the value function satisfies
+$V(s)=\E\!\left[r+\gamma V(S')\given S=s\right]$ precisely because a
+total-reward conditional expectation can be peeled one step at a time by
+the tower rule; see Section~\ref{sec:rl}. In variational inference the same
+rule lets one push an expectation through a latent variable to derive the
+ELBO (Section~\ref{sec:elbo}).
+\end{remark}
+
+\section{Conditional probability and conditional variance}
+
+\begin{definition}[Conditional probability given $\Gcal$]\label{def:cond-prob-sigma}
+For $A\in\Fcal$ define the random variable
+\begin{equation}
+  \cProb{A}{\Gcal}\;\defeq\;\cE{\one_A}{\Gcal}.
+\end{equation}
+\end{definition}
+
+By Proposition~\ref{prop:ce-props}, for each \emph{fixed} $A$ we have
+$0\le\cProb{A}{\Gcal}\le1$ a.s., $\cProb{\Omega}{\Gcal}=1$ a.s., and
+countable additivity holds a.s.\ for any fixed countable disjoint family.
+The crucial subtlety --- that these ``a.s.'' qualifiers cannot in general
+be made simultaneous over \emph{all} $A$ --- is the entire content of
+Chapter~\ref{ch:cond-dist}.
+
+\begin{definition}[Conditional variance]\label{def:cond-var}
+For $X\in L^2(\Prob)$,
+\begin{equation}
+  \cVar{X}{\Gcal}\;\defeq\;\cE{\bigl(X-\cE{X}{\Gcal}\bigr)^2}{\Gcal}
+   \;=\;\cE{X^2}{\Gcal}-\bigl(\cE{X}{\Gcal}\bigr)^2 .
+\end{equation}
+\end{definition}
+
+\begin{proposition}[Law of total variance]\label{prop:total-var}
+For $X\in L^2(\Prob)$,
+\begin{equation}\label{eq:total-var}
+  \Var(X)\;=\;\E\bigl[\cVar{X}{\Gcal}\bigr]
+            \;+\;\Var\bigl(\cE{X}{\Gcal}\bigr).
+\end{equation}
+\end{proposition}
+\begin{proof}
+Expand both terms using the tower rule and
+$\E[\cE{X}{\Gcal}]=\E[X]$; the cross term vanishes because
+$\cE{X}{\Gcal}$ is the $L^2$-projection of $X$ (Remark~\ref{rem:l2-proj}),
+so $X-\cE{X}{\Gcal}\perp L^2(\Gcal)\ni\cE{X}{\Gcal}-\E[X]$.
+\end{proof}
+
+\begin{remark}
+Equation~\eqref{eq:total-var} is the ``bias/variance'' bookkeeping behind,
+e.g., the decomposition of predictive uncertainty into \emph{aleatoric}
+($\E[\cVar{X}{\Gcal}]$, irreducible noise) and \emph{epistemic}
+($\Var(\cE{X}{\Gcal})$, reducible by more information) parts that recurs
+throughout the Bayesian deep-learning literature.
+\end{remark}
+
+\chapter{Conditioning on a random variable}\label{ch:cond-on-rv}
+
+\section{From \texorpdfstring{$\sigma(Y)$}{sigma(Y)} to a function of \texorpdfstring{$y$}{y}}
+\label{sec:cond-on-rv}
+
+ML papers almost never write $\cE{X}{\Gcal}$; they write $\cE{X}{Y}$ and,
+more often, $\cE{X}{Y=y}$. Making sense of the second requires one
+structural theorem.
+
+\begin{definition}[Conditioning on a random variable]
+For a random variable $Y:\Omega\to\Ycal$ set $\sigma(Y)\defeq
+Y^{-1}(\Bcal_\Ycal)$ and define
+\(
+  \cE{X}{Y}\defeq\cE{X}{\sigma(Y)},\qquad
+  \cProb{A}{Y}\defeq\cProb{A}{\sigma(Y)}.
+\)
+\end{definition}
+
+\begin{lemma}[Doob--Dynkin]\label{lem:doob-dynkin}
+Let $Y:\Omega\to\Ycal$ and $Z:\Omega\to\R$ be measurable, with $\Ycal$
+standard Borel. Then $Z$ is $\sigma(Y)$-measurable if and only if there
+exists a Borel function $g:\Ycal\to\R$ with $Z=g(Y)$.
+\end{lemma}
+
+Applied to $Z=\cE{X}{Y}$, which is $\sigma(Y)$-measurable by construction,
+the lemma produces a Borel $g$ with $\cE{X}{Y}=g(Y)$ a.s. \emph{This $g$ is
+what licenses the notation $\cE{X}{Y=y}$:}
+
+\begin{definition}[The evaluated conditional expectation]\label{def:eval-ce}
+With $g$ as above, define
+\begin{equation}
+  \cE{X}{Y=y}\;\defeq\;g(y),\qquad y\in\Ycal.
+\end{equation}
+\end{definition}
+
+\begin{warning}[What ``$\cE{X}{Y=y}$'' really is]\label{warn:version}
+The function $g$ of Lemma~\ref{lem:doob-dynkin} is determined only up to a
+$P_Y$-null set, where $P_Y=\Prob\circ Y^{-1}$ is the law of $Y$. Hence
+$\cE{X}{Y=y}$ is well defined only for $P_Y$-\emph{almost every} $y$, and
+its value at any single, pre-specified $y_0$ is meaningless in isolation.
+Two consequences a mathematician should hold onto:
+\begin{itemize}[leftmargin=1.6em]
+\item Statements like ``$\cE{X}{Y=y}=h(y)$ \emph{for all} $y$'' are abuses:
+they assert equality of two versions, true only $P_Y$-a.e.
+\item The random variable $\cE{X}{Y}=g(Y)$ \emph{is} well defined a.s.,
+because $Y$ never visits the $P_Y$-null exceptional set. The pathology lives
+entirely in the act of plugging in a deterministic $y$.
+\end{itemize}
+\end{warning}
+
+\begin{theorem}[Change of variables / the law of $\cE{X}{Y}$]\label{thm:cev}
+With $g(y)=\cE{X}{Y=y}$, for every bounded Borel $\psi:\Ycal\to\R$,
+\begin{equation}\label{eq:cev}
+  \E\bigl[X\,\psi(Y)\bigr]\;=\;\E\bigl[g(Y)\,\psi(Y)\bigr]
+  \;=\;\int_\Ycal g(y)\,\psi(y)\,P_Y(\dd y).
+\end{equation}
+\end{theorem}
+\begin{proof}
+The first equality is~\eqref{eq:take-out} with the $\sigma(Y)$-measurable
+factor $\psi(Y)$, then total expectation; the second is the image-measure
+(``law of the unconscious statistician'') formula.
+\end{proof}
+
+Equation~\eqref{eq:cev} is the rigorous skeleton of the ubiquitous ML move
+\(
+  \E_{X,Y}[\,\cdot\,]=\E_{Y}\bigl[\E_{X\given Y}[\,\cdot\,]\bigr],
+\)
+written in papers as ``condition on $Y$, then average.''
+
+\section{The regression function}
+
+\begin{definition}[Regression function]
+For $X\in L^1$ the map $m(y)\defeq\cE{X}{Y=y}$ is the \emph{regression
+function} of $X$ on $Y$.
+\end{definition}
+
+By Remark~\ref{rem:l2-proj}, when $X\in L^2$ the random variable $m(Y)$ is
+the $L^2(\sigma(Y))$ projection of $X$, hence
+\begin{equation}
+  m\;=\;\argmin_{f\ \text{Borel},\,f(Y)\in L^2}\ \E\bigl[(X-f(Y))^2\bigr].
+\end{equation}
+This is precisely the population object that a regression network with the
+squared-error loss is trying to approximate; the Bayes-optimal predictor of
+$X$ from $Y$ under squared loss \emph{is} the conditional expectation.
+Different losses target different conditional functionals: absolute loss
+targets a conditional median, and the ``pinball'' loss at level $\tau$
+targets the conditional $\tau$-quantile --- a point worth keeping in mind
+when a paper says a network ``predicts $Y$ given $X$'' without naming the
+loss.
+
+% =====================================================================
+\part{Conditional Distributions, Kernels, and Densities}\label{part:cond-dist}
+% =====================================================================
+
+\chapter{Markov kernels and regular conditional distributions}
+\label{ch:cond-dist}
+
+Conditional expectation gave us, for each \emph{fixed} event $A$, a random
+variable $\cProb{A}{\Gcal}$. What an ML paper means by ``the conditional
+distribution $p(\cdot\given y)$'' is the far stronger object in which $A$
+and $\omega$ vary together and the result is, for almost every outcome, an
+honest probability measure. The bridge is the notion of a Markov kernel.
+
+\section{Markov kernels}
+
+\begin{definition}[Markov kernel]\label{def:kernel}
+Let $(\Ycal,\Bcal_\Ycal)$ and $(\Xcal,\Bcal_\Xcal)$ be measurable spaces.
+A \emph{Markov kernel} (or \emph{transition kernel}, \emph{stochastic
+kernel}, \emph{conditional distribution}) from $\Ycal$ to $\Xcal$ is a map
+$\kappa:\Ycal\times\Bcal_\Xcal\to[0,1]$ such that
+\begin{enumerate}[label=\textup{(K\arabic*)},leftmargin=3.2em]
+\item for each fixed $y\in\Ycal$, $A\mapsto\kappa(y,A)$ is a probability
+      measure on $(\Xcal,\Bcal_\Xcal)$;\label{k:meas}
+\item for each fixed $A\in\Bcal_\Xcal$, $y\mapsto\kappa(y,A)$ is
+      $\Bcal_\Ycal$-measurable.\label{k:meas2}
+\end{enumerate}
+We write $\kappa(y,\dd x)$ or $\kappa(\dd x\given y)$, and overload
+notation by writing $\kappa(y,\cdot)=:p(\cdot\given y)$ once a reference
+measure is fixed.
+\end{definition}
+
+A Markov kernel is exactly ``a measurably-indexed family of probability
+measures.'' It is the rigorous content of every conditional distribution
+symbol in the ML literature: $p_\theta(x\given y)$, $q_\phi(z\given x)$,
+$\pi(\cdot\given s)$, the forward and reverse transitions of a diffusion,
+and the rows of a Markov-chain transition matrix are all Markov kernels.
+
+\begin{remark}[Kernels compose; this is why ``stacking conditionals''
+works]\label{rem:kernel-compose}
+Given a measure $\mu$ on $\Ycal$ and a kernel $\kappa$ from $\Ycal$ to
+$\Xcal$, one builds a measure on the product and a marginal:
+\begin{equation}
+  (\mu\otimes\kappa)(B\times A)=\int_B \kappa(y,A)\,\mu(\dd y),\qquad
+  (\mu\kappa)(A)=\int_\Ycal \kappa(y,A)\,\mu(\dd y).
+\end{equation}
+Kernels also compose: $(\kappa_2\kappa_1)(y,A)=\int\kappa_2(x,A)\,
+\kappa_1(y,\dd x)$ is the Chapman--Kolmogorov rule. This algebra is what
+makes an autoregressive factorization
+$p(x_{1:T})=\prod_t p(x_t\given x_{<t})$ or a Markov chain
+$p(x_{0:T})=p_0\prod_t \kappa(x_{t-1},\dd x_t)$ a genuine probability
+measure on the product space rather than a formal product of symbols
+(Sections~\ref{sec:autoreg}, \ref{sec:markov-diffusion}).
+\end{remark}
+
+\section{Regular conditional distributions}
+
+\begin{definition}[Regular conditional distribution]\label{def:rcd}
+Let $X:\Omega\to\Xcal$ and $Y:\Omega\to\Ycal$ be random variables. A
+\emph{regular conditional distribution} (r.c.d.) of $X$ given $Y$ is a
+Markov kernel $\kappa$ from $\Ycal$ to $\Xcal$ such that for every
+$A\in\Bcal_\Xcal$,
+\begin{equation}\label{eq:rcd-defining}
+  \kappa\bigl(Y,A\bigr)\;\eqas\;\cProb{X\in A}{Y}.
+\end{equation}
+Equivalently, for all $A\in\Bcal_\Xcal$, $B\in\Bcal_\Ycal$,
+\begin{equation}\label{eq:rcd-joint}
+  \Prob(X\in A,\,Y\in B)\;=\;\int_B \kappa(y,A)\,P_Y(\dd y).
+\end{equation}
+We then write $P_{X\given Y}(A\given y)\defeq\kappa(y,A)$.
+\end{definition}
+
+The point of~\eqref{eq:rcd-defining} is the order of quantifiers. For each
+fixed $A$ the right-hand side is only an a.s.-defined random variable; the
+r.c.d.\ asserts the existence of a \emph{single} kernel that
+simultaneously serves as a version for \emph{all} $A$ at once, \emph{and}
+is a genuine probability measure in $A$ for every $y$. That such a
+reconciliation is possible is not automatic.
+
+\begin{theorem}[Existence on standard Borel spaces]\label{thm:rcd-exists}
+If $\Xcal$ is a standard Borel space (a Borel subset of a Polish space with
+its Borel $\sigma$-algebra), then a regular conditional distribution of $X$
+given $Y$ exists, and it is unique in the sense that any two r.c.d.s
+$\kappa,\kappa'$ satisfy $\kappa(y,\cdot)=\kappa'(y,\cdot)$ for
+$P_Y$-almost every $y$.
+\end{theorem}
+
+\begin{remark}[Why the topological hypothesis is unavoidable]
+Without a hypothesis like ``standard Borel'' the r.c.d.\ can fail to exist:
+one can patch together the a.s.-defined versions $\cProb{X\in A}{Y}$ over a
+countable generating algebra, but extending to a measure for \emph{every}
+$y$ requires controlling uncountably many null sets at once, which needs
+the regularity that Polish spaces provide (via, e.g., the existence of
+a countable basis and the Carath\'eodory extension along a compact class).
+For the ML reader the practical upshot is reassuring: every space that
+occurs in practice --- $\R^d$, compact manifolds, sequence spaces,
+$\{0,1\}^n$, spaces of measures with the weak topology --- is standard
+Borel, so the conditional distributions written in papers do exist. The
+hypothesis is exactly the ``standing convention'' announced in the Preface.
+\end{remark}
+
+\begin{theorem}[Disintegration]\label{thm:disintegration}
+Let $\mu$ be the joint law of $(X,Y)$ on $\Xcal\times\Ycal$ with $\Xcal$
+standard Borel, and let $\nu=P_Y$ be the $Y$-marginal. Then there is a
+$\nu$-a.e.-unique Markov kernel $\kappa(y,\dd x)$ with
+\begin{equation}\label{eq:disint}
+  \mu(\dd x,\dd y)\;=\;\kappa(y,\dd x)\,\nu(\dd y),
+\end{equation}
+meaning $\displaystyle\int f\,\dd\mu=\int_\Ycal\!\int_\Xcal
+f(x,y)\,\kappa(y,\dd x)\,\nu(\dd y)$ for all bounded measurable $f$. The
+kernel $\kappa$ is the r.c.d.\ of $X$ given $Y$.
+\end{theorem}
+
+Disintegration~\eqref{eq:disint} is the theorem that justifies writing a
+joint density as ``conditional $\times$ marginal'' --- the single most
+common factorization in machine learning --- at the level of measures,
+before any density exists. With it, conditional expectation is recovered as
+an honest integral against a measure:
+\begin{equation}\label{eq:ce-via-rcd}
+  \cE{X}{Y=y}\;=\;\int_\Xcal x\,\kappa(y,\dd x),
+  \qquad
+  \cE{\varphi(X)}{Y=y}\;=\;\int_\Xcal \varphi(x)\,\kappa(y,\dd x),
+\end{equation}
+valid for $P_Y$-a.e.\ $y$ whenever the integrals converge. This is the form
+in which a mathematician should \emph{read} every ``$\E_{x\sim p(\cdot\given
+y)}[\varphi(x)]$'' in a paper.
+
+\chapter{Conditional densities and Bayes' rule}\label{ch:cond-density}
+
+A density is a derivative of one measure with respect to another. ML uses
+the letter $p$ for all of them, so the reference measure must be supplied
+by the reader.
+
+\section{When a conditional density exists}
+
+\begin{definition}[Conditional density]\label{def:cond-density}
+Fix a $\sigma$-finite reference measure $\lambda$ on $\Xcal$ (Lebesgue on
+$\R^d$, counting on a discrete set). Suppose the joint law of $(X,Y)$ has a
+density $p_{X,Y}$ with respect to $\lambda\otimes\rho$ for some
+$\sigma$-finite $\rho$ on $\Ycal$, and set
+$p_Y(y)=\int_\Xcal p_{X,Y}(x,y)\,\lambda(\dd x)$, the $Y$-marginal density
+w.r.t.\ $\rho$. Then for $y$ with $p_Y(y)>0$ define
+\begin{equation}\label{eq:cond-density}
+  p_{X\given Y}(x\given y)\;\defeq\;\frac{p_{X,Y}(x,y)}{p_Y(y)} ,
+\end{equation}
+and (arbitrarily, e.g.\ as a fixed reference density) where $p_Y(y)=0$.
+\end{definition}
+
+\begin{proposition}[The density is a density of the r.c.d.]
+\label{prop:density-is-rcd}
+Under Definition~\ref{def:cond-density}, the kernel
+$\kappa(y,A)=\int_A p_{X\given Y}(x\given y)\,\lambda(\dd x)$ is a regular
+conditional distribution of $X$ given $Y$. In particular
+$\{y:p_Y(y)=0\}$ is $P_Y$-null, so the arbitrary choice there is immaterial,
+and~\eqref{eq:ce-via-rcd} becomes
+$\cE{\varphi(X)}{Y=y}=\int\varphi(x)\,p_{X\given Y}(x\given y)\,\lambda(\dd x)$.
+\end{proposition}
+\begin{proof}
+Verify~\eqref{eq:rcd-joint}: for $A\in\Bcal_\Xcal$, $B\in\Bcal_\Ycal$,
+Tonelli gives
+$\int_B\!\int_A p_{X\given Y}(x\given y)\lambda(\dd x)\,p_Y(y)\rho(\dd y)
+=\int_{A\times B}p_{X,Y}\,\dd(\lambda\otimes\rho)=\Prob(X\in A,Y\in B)$,
+using $p_{X\given Y}\,p_Y=p_{X,Y}$ off the null set $\{p_Y=0\}$.
+\end{proof}
+
+\begin{warning}[The same letter $p$ is three different functions]
+In~\eqref{eq:cond-density} the symbols $p_{X,Y}$, $p_Y$, and
+$p_{X\given Y}$ are distinct functions on distinct domains; papers drop the
+subscripts and write $p(x,y)$, $p(y)$, $p(x\given y)$, relying on the
+\emph{argument names} to disambiguate. Thus in ML ``$p(y)$'' and
+``$p(x)$'' may denote different functions of a real variable. A
+mathematician should mentally restore the subscripts: the bar in
+$p(x\given y)$ encodes ``the $\Xcal$-density of the r.c.d.\ at parameter
+$y$,'' not a quotient of values of one fixed function.
+\end{warning}
+
+\section{Bayes' rule as an identity of densities}
+
+\begin{proposition}[Bayes' rule]\label{prop:bayes}
+With the hypotheses of Definition~\ref{def:cond-density} and $p_X(x)>0$,
+where $p_X(x)=\int p_{X,Y}(x,y)\,\rho(\dd y)$ is the $X$-marginal,
+\begin{equation}\label{eq:bayes}
+  p_{Y\given X}(y\given x)
+   \;=\;\frac{p_{X\given Y}(x\given y)\,p_Y(y)}{p_X(x)}
+   \;=\;\frac{p_{X\given Y}(x\given y)\,p_Y(y)}
+            {\displaystyle\int_\Ycal p_{X\given Y}(x\given y')\,p_Y(y')\,\rho(\dd y')}.
+\end{equation}
+\end{proposition}
+
+Read with $Y=\theta$ a parameter and $X=\Dcal$ the data, \eqref{eq:bayes}
+is the posterior $=$ likelihood $\times$ prior $/$ evidence formula of
+Bayesian ML (Section~\ref{sec:posterior}). Read with $Y$ a class label it
+is the generative classifier. The denominator --- the \emph{evidence} or
+\emph{partition function} --- is the normalizing integral whose
+intractability is the reason variational and Monte-Carlo machinery exists
+at all.
+
+\section{The Borel--Kolmogorov paradox}\label{sec:bk-paradox}
+
+We can now state precisely the ambiguity warned of in
+Chapter~\ref{ch:why}, and its resolution.
+
+\begin{example}[Conditioning on a great circle vs.\ a meridian]
+\label{ex:bk}
+Let $X$ be uniform on the unit sphere $S^2$. Consider the event ``$X$ lies
+on a fixed great circle $C$.'' One may present $C$ as
+$\{$longitude $=\,$const$\}$ (a meridian) or, after rotating, as
+$\{$latitude $=0\}$ (the equator). Conditioning $X$ on the meridian, the
+r.c.d.\ along $C$ is \emph{not} uniform in arc length (it is weighted by
+$\cos(\text{latitude})$); conditioning on the equator, it \emph{is}
+uniform. Both are correct r.c.d.s for their respective \emph{variables},
+yet they assign different ``conditional laws'' to the same null set $C$.
+\end{example}
+
+\begin{remark}[Diagnosis and resolution]
+There is no contradiction with Theorem~\ref{thm:rcd-exists}. An r.c.d.\ is a
+kernel attached to a \emph{random variable} $Y$ (longitude, or latitude),
+not to a bare null event. Uniqueness in Theorem~\ref{thm:rcd-exists} is
+$P_Y$-a.e.\ \emph{for that $Y$}; changing $Y$ changes the kernel and there
+is no reason two different conditioning variables should agree on a single
+fibre that both happen to contain. The lesson for reading ML papers:
+\begin{quote}
+``$p(x\given y)$ at a particular $y$'' is meaningful only relative to the
+\emph{family} $\{p(\cdot\given y)\}_y$ --- equivalently, relative to the
+disintegrating variable $Y$. Conditioning on an isolated measure-zero
+event, detached from such a family, is undefined.
+\end{quote}
+This is why diffusion and flow papers are careful to define a whole path of
+conditional laws $p_t(\cdot\given y)$ indexed by $t$ and $y$, rather than
+conditioning on individual zero-probability level sets ad hoc.
+\end{remark}
+
+% =====================================================================
+\part{Conditional Independence}\label{part:cond-indep}
+% =====================================================================
+
+\chapter{Conditional independence}\label{ch:cond-indep}
+
+The symbol $X\indep Y\given Z$ --- ``$X$ and $Y$ are independent given
+$Z$'' --- is the load-bearing assumption of graphical models, causal
+inference, and almost every probabilistic factorization in ML. It has
+several equivalent definitions; knowing which one a paper is using removes
+most confusion.
+
+\section{Equivalent definitions}
+
+\begin{definition}[Conditional independence]\label{def:ci}
+Let $X,Y,Z$ be random variables into standard Borel spaces. We say $X$ and
+$Y$ are \emph{conditionally independent given $Z$}, written
+$X\indep Y\given Z$, if any one of the following equivalent conditions
+holds.
+\begin{enumerate}[label=\textup{(CI\arabic*)},leftmargin=3.4em]
+\item \textup{(Kernel factorization)} a regular conditional distribution of
+      $(X,Y)$ given $Z$ factors:
+      \begin{equation}\label{eq:ci-kernel}
+        P_{(X,Y)\given Z}(\dd x,\dd y\given z)
+        \;=\;P_{X\given Z}(\dd x\given z)\,P_{Y\given Z}(\dd y\given z)
+        \quad\text{for }P_Z\text{-a.e.\ }z.
+      \end{equation}
+\item \textup{(Conditional-probability product)} for all
+      $A\in\Bcal_\Xcal$, $B\in\Bcal_\Ycal$,
+      \begin{equation}\label{eq:ci-prob}
+        \cProb{X\in A,\,Y\in B}{Z}\;\eqas\;
+        \cProb{X\in A}{Z}\,\cProb{Y\in B}{Z}.
+      \end{equation}
+\item \textup{(Conditional-expectation product)} for all bounded Borel
+      $f,g$,
+      \begin{equation}\label{eq:ci-exp}
+        \cE{f(X)g(Y)}{Z}\;\eqas\;\cE{f(X)}{Z}\,\cE{g(Y)}{Z}.
+      \end{equation}
+\item \textup{(Sufficiency form)} for all bounded Borel $f$,
+      \begin{equation}\label{eq:ci-suff}
+        \cE{f(X)}{Y,Z}\;\eqas\;\cE{f(X)}{Z};
+      \end{equation}
+      i.e.\ once $Z$ is known, $Y$ carries no further information about $X$.
+\item \textup{(Density factorization, when densities exist)}
+      \begin{equation}\label{eq:ci-density}
+        p_{X,Y\given Z}(x,y\given z)\;=\;p_{X\given Z}(x\given z)\,
+        p_{Y\given Z}(y\given z)\qquad(\text{a.e.}).
+      \end{equation}
+\end{enumerate}
+\end{definition}
+
+\begin{proposition}[Equivalence]
+Conditions \textup{(CI1)--(CI5)} are equivalent (with \textup{(CI5)}
+requiring the existence of the relevant densities).
+\end{proposition}
+\begin{proof}[Notes]
+(CI1)$\Leftrightarrow$(CI2) is~\eqref{eq:rcd-defining} read for the pair
+$(X,Y)$ and the product kernel. (CI2)$\Leftrightarrow$(CI3) extends
+indicators to bounded functions by linearity and monotone convergence.
+(CI3)$\Rightarrow$(CI4): for bounded $f$ and any bounded $g(Y),h(Z)$,
+$\E[\cE{f(X)}{Y,Z}g(Y)h(Z)]=\E[f(X)g(Y)h(Z)]
+=\E[h(Z)\cE{f(X)g(Y)}{Z}] =\E[h(Z)\cE{f(X)}{Z}\cE{g(Y)}{Z}]
+=\E[\cE{f(X)}{Z}g(Y)h(Z)]$, using (CI3) and taking out $\cE{g(Y)}{Z}$;
+since products $g(Y)h(Z)$ generate $\sigma(Y,Z)$ this
+gives~\eqref{eq:ci-suff}. (CI4)$\Rightarrow$(CI3) reverses the computation
+via the tower rule. (CI5) is~\eqref{eq:ci-kernel} written through
+densities (Proposition~\ref{prop:density-is-rcd}).
+\end{proof}
+
+\begin{remark}[The symmetry that the bar hides]
+Form~\eqref{eq:ci-suff} looks asymmetric in $X$ and $Y$, but conditional
+independence is symmetric: $X\indep Y\given Z\iff Y\indep X\given Z$. The
+sufficiency reading is nonetheless the one most used in ML --- ``$Z$ is a
+sufficient statistic,'' ``the representation $Z$ makes the label $Y$
+conditionally independent of the input $X$,'' the Markov property of latent
+states --- so it is worth recognizing it as merely one face of
+Definition~\ref{def:ci}.
+\end{remark}
+
+\section{The graphoid axioms}
+
+Conditional independence behaves like a calculus of ``irrelevance.'' The
+following identities, the \emph{graphoid axioms}, are the rules that
+graphical-model algorithms (d-separation, message passing) silently rely
+on. Write $X\indep Y\given Z$ for the ternary relation.
+
+\begin{proposition}[Semi-graphoid axioms]\label{prop:graphoid}
+For random variables $W,X,Y,Z$:
+\begin{align}
+&\textup{(Symmetry)} && X\indep Y\given Z \;\Longrightarrow\; Y\indep X\given Z;\\
+&\textup{(Decomposition)} && X\indep (Y,W)\given Z \;\Longrightarrow\; X\indep Y\given Z;\\
+&\textup{(Weak union)} && X\indep (Y,W)\given Z \;\Longrightarrow\; X\indep Y\given (Z,W);\\
+&\textup{(Contraction)} && \bigl(X\indep Y\given Z\bigr)\,\wedge\,
+   \bigl(X\indep W\given (Y,Z)\bigr)\;\Longrightarrow\; X\indep (Y,W)\given Z.
+\end{align}
+\end{proposition}
+
+\begin{proposition}[Intersection, under positivity]\label{prop:intersection}
+If the joint density is strictly positive (more generally, under a
+suitable positivity condition), the additional \emph{intersection} axiom
+holds:
+\begin{equation}
+  \bigl(X\indep Y\given (Z,W)\bigr)\,\wedge\,
+  \bigl(X\indep W\given (Z,Y)\bigr)\;\Longrightarrow\;
+  X\indep (Y,W)\given Z.
+\end{equation}
+\end{proposition}
+
+\begin{warning}[Intersection can fail]
+The intersection axiom is the one that requires a hypothesis. Without
+positivity it is false: take $Y=W$ a single fair coin and $X=Y$; then
+$X\indep Y\given (Z,W)$ and $X\indep W\given (Z,Y)$ hold trivially (the
+conditioning already determines $X$), yet $X$ is not independent of
+$(Y,W)$ given $Z$. ML papers that invoke ``by the graphoid axioms'' while
+manipulating sparse or deterministic models are implicitly assuming the
+positivity that licenses intersection; a careful reader checks it.
+\end{warning}
+
+\section{Factorization over graphs}
+
+\begin{definition}[Bayesian-network factorization]\label{def:bn}
+Let $G$ be a directed acyclic graph on vertices $\{1,\dots,d\}$ with parent
+sets $\mathrm{pa}(i)$. A law $p$ on $\Xcal_1\times\cdots\times\Xcal_d$
+\emph{factorizes according to $G$} if
+\begin{equation}\label{eq:bn-factor}
+  p(x_1,\dots,x_d)\;=\;\prod_{i=1}^d p\bigl(x_i\given x_{\mathrm{pa}(i)}\bigr).
+\end{equation}
+\end{definition}
+
+\begin{theorem}[Factorization $\Leftrightarrow$ Markov property]
+\label{thm:bn-markov}
+A positive law factorizes as~\eqref{eq:bn-factor} if and only if it
+satisfies the local Markov property of $G$: each variable is conditionally
+independent of its non-descendants given its parents,
+$X_i\indep X_{\mathrm{nd}(i)\setminus\mathrm{pa}(i)}\given X_{\mathrm{pa}(i)}$.
+Either condition is equivalent to the global Markov property
+(d-separation $\Rightarrow$ conditional independence).
+\end{theorem}
+
+Equation~\eqref{eq:bn-factor} is the rigorous meaning of the ``plate
+diagrams'' and factor graphs that open most probabilistic-ML papers, and
+each factor $p(x_i\given x_{\mathrm{pa}(i)})$ is a Markov kernel in the
+sense of Definition~\ref{def:kernel}. The autoregressive models of
+Section~\ref{sec:autoreg} are the special case of the complete DAG with
+$\mathrm{pa}(i)=\{1,\dots,i-1\}$, where~\eqref{eq:bn-factor} is not an
+assumption at all but the chain rule of probability.
+
+% =====================================================================
+\part{Conditional Information Measures}\label{part:info}
+% =====================================================================
+
+\chapter{Relative entropy and the conditional information measures}
+\label{ch:info}
+
+Every information-theoretic quantity in ML is built from one primitive ---
+relative entropy --- so we start there and obtain entropy, cross-entropy,
+mutual information, and their conditional versions as corollaries. Logarithms
+are natural unless a paper says ``bits.''
+
+\section{Relative entropy (KL divergence)}
+
+\begin{definition}[Kullback--Leibler divergence]\label{def:kl}
+For probability measures $P,Q$ on a common $(\Xcal,\Bcal)$,
+\begin{equation}\label{eq:kl}
+  \KL(P\,\|\,Q)\;\defeq\;
+  \begin{cases}
+    \displaystyle\int_\Xcal \log\frac{\dd P}{\dd Q}\,\dd P
+      \;=\;\int_\Xcal \frac{\dd P}{\dd Q}\log\frac{\dd P}{\dd Q}\,\dd Q,
+      & P\ll Q,\\[1.2em]
+    +\infty, & P\not\ll Q.
+  \end{cases}
+\end{equation}
+If $P,Q$ have densities $p,q$ w.r.t.\ a common reference $\lambda$, then
+$\KL(P\|Q)=\int p\log(p/q)\,\dd\lambda$.
+\end{definition}
+
+\begin{proposition}[Gibbs' inequality]\label{prop:gibbs}
+$\KL(P\|Q)\ge 0$, with equality iff $P=Q$. Consequently $\KL$ is a
+\emph{divergence}: it separates points. It is \emph{not} a metric --- it is
+asymmetric and violates the triangle inequality.
+\end{proposition}
+\begin{proof}
+Apply Jensen to the strictly convex $-\log$:
+\[
+  -\KL(P\|Q)=\int\log\frac{\dd Q}{\dd P}\,\dd P
+   \;\le\;\log\!\int\frac{\dd Q}{\dd P}\,\dd P=\log Q(\Xcal)=0,
+\]
+with equality iff $\dd Q/\dd P$ is $P$-a.s.\ constant, i.e.\ $P=Q$.
+\end{proof}
+
+\begin{warning}[The absolute-continuity trap]
+$\KL(P\|Q)=+\infty$ whenever $P$ places mass where $Q$ does not. This is
+the rigorous reason a generative model with a too-small support, or a
+variational posterior $q$ that is more spread out than the true posterior,
+incurs the notorious ``mode covering vs.\ mode seeking'' asymmetry:
+$\KL(q\|p)$ (used in variational inference, Section~\ref{sec:elbo}) blows
+up if $q$ has mass where $p\approx0$, whereas $\KL(p\|q)$ (used in maximum
+likelihood, Section~\ref{sec:mle}) blows up if $q$ misses mass that $p$
+has. Same symbol $\KL$, opposite failure modes, decided entirely by
+argument order.
+\end{warning}
+
+\section{Entropy and cross-entropy}
+
+\begin{definition}[Entropy and cross-entropy]\label{def:entropy}
+For a discrete law $P$ with pmf $p$ on a countable $\Xcal$,
+\begin{equation}
+  \Ent(P)\;=\;\Ent(X)\;\defeq\;-\!\sum_{x}p(x)\log p(x)
+            \;=\;-\,\E_{P}[\log p(X)],
+\end{equation}
+and for $P\ll\lambda$ with density $p$ (e.g.\ $\lambda=$ Lebesgue), the
+\emph{differential entropy}
+\begin{equation}
+  \diffent(X)\;\defeq\;-\!\int_\Xcal p(x)\log p(x)\,\lambda(\dd x).
+\end{equation}
+The \emph{cross-entropy} of $Q$ (density $q$) relative to $P$ is
+\(
+  \Ent(P,Q)\defeq-\E_P[\log q(X)].
+\)
+\end{definition}
+
+\begin{proposition}[The bookkeeping identity]\label{prop:ce-kl}
+Whenever the terms are finite,
+\begin{equation}\label{eq:ce-decomp}
+  \Ent(P,Q)\;=\;\Ent(P)\;+\;\KL(P\,\|\,Q).
+\end{equation}
+\end{proposition}
+
+Equation~\eqref{eq:ce-decomp} is why ``minimizing cross-entropy'' and
+``minimizing KL to the data distribution'' are the same training objective:
+$\Ent(P)$ does not depend on the model $Q$, so
+$\argmin_Q \Ent(P,Q)=\argmin_Q\KL(P\|Q)$. We return to this in
+Section~\ref{sec:mle}.
+
+\begin{warning}[Differential entropy is not entropy]\label{warn:diffent}
+For continuous $X$, $\diffent(X)$ can be negative, is \emph{not} invariant
+under smooth reparameterization (under $X\mapsto T(X)$ it changes by
+$\E[\log|\det\nabla T|]$), and is not the limit of discrete entropies of
+finer quantizations (that limit diverges). It is best regarded only as a
+term that makes other quantities --- mutual information, KL --- behave well,
+since those are differences in which the offending Jacobians and infinities
+cancel. A mathematician should distrust any standalone use of $\diffent$.
+\end{warning}
+
+\section{Conditional entropy}
+
+\begin{definition}[Conditional entropy]\label{def:cond-entropy}
+For discrete $(X,Y)$,
+\begin{equation}\label{eq:cond-entropy}
+  \Ent(X\given Y)\;\defeq\;\sum_{y}p_Y(y)\,\Ent(X\given Y=y)
+   \;=\;-\!\sum_{x,y}p_{X,Y}(x,y)\,\log p_{X\given Y}(x\given y),
+\end{equation}
+where $\Ent(X\given Y=y)$ is the entropy of the fibre law
+$P_{X\given Y}(\cdot\given y)$. Equivalently,
+\[
+  \Ent(X\given Y)=\E_Y\bigl[\Ent\bigl(P_{X\given Y}(\cdot\given Y)\bigr)\bigr].
+\]
+\end{definition}
+
+So conditional entropy is the \emph{expected entropy of the regular
+conditional distribution} --- an average over $Y$ of an entropy computed
+inside each fibre, exactly the disintegration~\eqref{eq:disint} at work.
+It is \emph{not} the entropy of a conditional law at a single $y$; the
+single-$y$ object is $\Ent(X\given Y=y)$, and the unadorned $\Ent(X\given
+Y)$ has already integrated it out.
+
+\begin{proposition}[Chain rule and conditioning reduces entropy]
+\label{prop:entropy-chain}
+For discrete variables,
+\begin{equation}\label{eq:entropy-chain}
+  \Ent(X,Y)\;=\;\Ent(Y)+\Ent(X\given Y),\qquad
+  0\;\le\;\Ent(X\given Y)\;\le\;\Ent(X),
+\end{equation}
+the right inequality (``conditioning cannot increase entropy,'' with
+equality iff $X\indep Y$) holding \emph{on average} only --- it can happen
+that $\Ent(X\given Y=y)>\Ent(X)$ for particular $y$.
+\end{proposition}
+
+\section{Mutual information and its conditional form}
+
+\begin{definition}[Mutual and conditional mutual information]\label{def:mi}
+\begin{align}
+  \MI(X;Y)&\;\defeq\;\KL\bigl(P_{X,Y}\,\big\|\,P_X\otimes P_Y\bigr),\label{eq:mi}\\
+  \MI(X;Y\given Z)&\;\defeq\;
+    \E_Z\Bigl[\KL\bigl(P_{X,Y\given Z}(\cdot\given Z)\,\big\|\,
+       P_{X\given Z}(\cdot\given Z)\otimes P_{Y\given Z}(\cdot\given Z)\bigr)\Bigr].
+  \label{eq:cmi}
+\end{align}
+\end{definition}
+
+Definition~\eqref{eq:mi} is reference-measure-free and so escapes the
+pathologies of differential entropy (Warning~\ref{warn:diffent}): mutual
+information is a KL divergence between honest measures and is therefore
+nonnegative, invariant under bijective reparameterization of $X$ and of
+$Y$, and equal to $+\infty$ exactly when $P_{X,Y}\not\ll P_X\otimes P_Y$.
+The conditional version~\eqref{eq:cmi} is, once more, an \emph{average over
+$Z$} of a per-fibre KL.
+
+\begin{proposition}[Identities]\label{prop:mi-ids}
+When the entropies are finite,
+\begin{align}
+  \MI(X;Y)&=\Ent(X)-\Ent(X\given Y)=\Ent(Y)-\Ent(Y\given X)\ \ge 0,\\
+  \MI(X;Y\given Z)&=\Ent(X\given Z)-\Ent(X\given Y,Z)\ \ge 0,\\
+  \MI(X;Y,Z)&=\MI(X;Z)+\MI(X;Y\given Z) \quad\text{(chain rule).}
+  \label{eq:mi-chain}
+\end{align}
+Moreover $\MI(X;Y\given Z)=0\iff X\indep Y\given Z$, tying
+Part~\ref{part:cond-indep} to Part~\ref{part:info}: \emph{conditional
+independence is exactly the vanishing of conditional mutual information.}
+\end{proposition}
+
+\begin{remark}[Where these appear]
+Conditional mutual information $\MI(X;Y\given Z)$ is the quantity behind the
+information-bottleneck objective, the ``minimality/sufficiency'' analyses of
+learned representations, and the conditional-independence tests of causal
+discovery. The chain rule~\eqref{eq:mi-chain} is the information-theoretic
+shadow of the probability chain rule that drives autoregressive models
+(Section~\ref{sec:autoreg}). Recognizing all of these as averaged
+per-fibre KL divergences --- never as arithmetic on single-$y$ entropies ---
+is the main thing a mathematician needs to read them safely.
+\end{remark}
+
+\section{Conditional KL and the chain rule for divergence}
+
+\begin{definition}[Conditional / expected KL]\label{def:cond-kl}
+Given kernels $P_{X\given Y},Q_{X\given Y}$ and a law $P_Y$,
+\begin{equation}\label{eq:cond-kl}
+  \KL\bigl(P_{X\given Y}\,\big\|\,Q_{X\given Y}\,\big|\,P_Y\bigr)
+   \;\defeq\;\int_\Ycal
+     \KL\bigl(P_{X\given Y}(\cdot\given y)\,\big\|\,Q_{X\given Y}(\cdot\given y)\bigr)
+     \,P_Y(\dd y).
+\end{equation}
+\end{definition}
+
+\begin{proposition}[Chain rule for KL]\label{prop:kl-chain}
+For joint laws $P=P_Y\,P_{X\given Y}$ and $Q=Q_Y\,Q_{X\given Y}$,
+\begin{equation}\label{eq:kl-chain}
+  \KL(P_{X,Y}\,\|\,Q_{X,Y})
+   \;=\;\KL(P_Y\,\|\,Q_Y)
+       \;+\;\KL\bigl(P_{X\given Y}\,\big\|\,Q_{X\given Y}\,\big|\,P_Y\bigr).
+\end{equation}
+\end{proposition}
+
+The conditional KL~\eqref{eq:cond-kl} --- note it averages the second
+argument's null-set behavior over $P_Y$, the \emph{first} law's marginal ---
+is the per-step training signal of diffusion models, where the loss is a
+sum of terms $\KL\bigl(q(x_{t-1}\given x_t,x_0)\,\|\,p_\theta(x_{t-1}\given
+x_t)\bigr)$ averaged over the forward process
+(Section~\ref{sec:markov-diffusion}). The chain rule~\eqref{eq:kl-chain} is
+what telescopes those per-step divergences into a bound on the divergence
+between full trajectory laws.
+
+% =====================================================================
+\part{The Machine-Learning Symbol Dictionary}\label{part:dictionary}
+% =====================================================================
+
+This part is the reverse map. Each entry takes a symbol \emph{as it is
+actually printed in a thesis}, states what a reader should mentally
+substitute, and points to the rigorous object in
+Parts~\ref{part:foundations}--\ref{part:info}. The recurring move is
+always one of three: a bar denotes a Markov kernel
+(Definition~\ref{def:kernel}), a conditional expectation
+(Definition~\ref{def:cond-exp}), or a conditional density
+(Definition~\ref{def:cond-density}); everything else is bookkeeping.
+
+\chapter{Likelihood, posterior, and the variational bar}
+
+\section{Likelihood, NLL, and MLE as a KL projection}\label{sec:mle}
+
+\begin{mlentry}{$p_\theta(x)$,\quad $p_\theta(y\given x)$,\quad
+$\mathcal L(\theta)=\prod_i p_\theta(x_i)$,\quad
+$-\log p_\theta(y\given x)$.}
+A \emph{model} is a parameterized family of probability measures
+$\{P_\theta:\theta\in\Theta\}$ on the data space, each with density
+$p_\theta$ w.r.t.\ a fixed reference $\lambda$. Read $p_\theta(x)$ as ``the
+density of $P_\theta$ at $x$,'' a function of $x$ for fixed $\theta$; read
+the \emph{likelihood} $\theta\mapsto p_\theta(x)$ as the same expression
+viewed as a function of $\theta$ for fixed observed $x$. The
+\emph{conditional likelihood} $p_\theta(y\given x)$ is a Markov kernel
+(Definition~\ref{def:kernel}) indexed by $\theta$: a discriminative model
+predicting $y$ from $x$. The \emph{negative log-likelihood} (NLL)
+$-\log p_\theta(y\given x)$ is the per-example loss of supervised learning.
+\end{mlentry}
+
+\begin{proposition}[Maximum likelihood is KL projection onto the model]
+\label{prop:mle-kl}
+Let $\widehat P_n=\frac1n\sum_{i=1}^n\delta_{x_i}$ be the empirical
+distribution of i.i.d.\ data $x_i\sim P_\star$. Then
+\begin{equation}
+  \argmax_{\theta}\ \frac1n\sum_{i=1}^n\log p_\theta(x_i)
+  \;=\;\argmin_{\theta}\ \Ent\!\bigl(\widehat P_n,\,P_\theta\bigr)
+  \;=\;\argmin_{\theta}\ \KL\!\bigl(\widehat P_n\,\big\|\,P_\theta\bigr),
+\end{equation}
+and as $n\to\infty$ the population objective is
+$\argmin_\theta \KL(P_\star\|P_\theta)$.
+\end{proposition}
+\begin{proof}
+Maximizing the average log-likelihood equals minimizing the cross-entropy
+$\Ent(\widehat P_n,P_\theta)=-\frac1n\sum_i\log p_\theta(x_i)$; subtract the
+$\theta$-free term $\Ent(\widehat P_n)$ and apply~\eqref{eq:ce-decomp}.
+\end{proof}
+
+So ``train by minimizing cross-entropy'' \emph{is} ``project the data
+distribution onto the model in KL'' --- the forward $\KL(P_\star\|P_\theta)$,
+the mode-covering one of Warning~\ref{warn:diffent}'s companion. The bar in
+$p_\theta(y\given x)$ contributes the conditional version: minimizing
+$\E_{x}\bigl[\KL\bigl(P_\star(\cdot\given x)\,\|\,P_\theta(\cdot\given
+x)\bigr)\bigr]$, the conditional KL~\eqref{eq:cond-kl} of
+Definition~\ref{def:cond-kl}.
+
+\section{Posterior and evidence}\label{sec:posterior}
+
+\begin{mlentry}{$p(\theta\given\Dcal)$,\quad $p(\Dcal\given\theta)$,\quad
+$p(\Dcal)=\int p(\Dcal\given\theta)p(\theta)\dd\theta$.}
+In the Bayesian picture the parameter $\theta$ is itself a random variable
+with prior law $p(\theta)$. The \emph{posterior} $p(\theta\given\Dcal)$ is
+literally the conditional density of Definition~\ref{def:cond-density} with
+$X=\theta$, $Y=\Dcal$, supplied by Bayes' rule
+(Proposition~\ref{prop:bayes}):
+\begin{equation}\label{eq:posterior}
+  p(\theta\given\Dcal)\;=\;\frac{p(\Dcal\given\theta)\,p(\theta)}{p(\Dcal)},
+  \qquad p(\Dcal)=\int_\Theta p(\Dcal\given\theta)\,p(\theta)\,\dd\theta.
+\end{equation}
+The normalizer $p(\Dcal)$ --- the \emph{evidence} or \emph{marginal
+likelihood} --- is the $\Dcal$-marginal density and is the integral whose
+intractability motivates everything in the next section.
+\end{mlentry}
+
+\begin{warning}[$p(x;\theta)$ vs.\ $p(x\given\theta)$: semicolon is not a bar]
+A frequentist writes $p(x;\theta)$ or $p_\theta(x)$ --- $\theta$ is a fixed
+index, not an event, and there is no measure on $\Theta$. A Bayesian writes
+$p(x\given\theta)$ --- $\theta$ is a random variable and the bar is genuine
+conditioning. The two coincide \emph{numerically} but mean different things:
+only the second makes $p(\theta\given x)$ meaningful. When a paper slides
+between $p(x;\theta)$ and $p(x\given\theta)$ it is silently choosing whether
+$\Theta$ carries a probability measure. A mathematician should track which.
+\end{warning}
+
+\section{The variational posterior and the ELBO}\label{sec:elbo}
+
+\begin{mlentry}{$q_\phi(z\given x)$,\quad
+$\E_{q_\phi(z\given x)}[\cdot]$,\quad ELBO.}
+A latent-variable model posits $p_\theta(x,z)=p_\theta(x\given z)\,p(z)$
+with a prior $p(z)$ and a decoder kernel $p_\theta(x\given z)$. The exact
+posterior $p_\theta(z\given x)=p_\theta(x,z)/p_\theta(x)$ is intractable
+because $p_\theta(x)=\int p_\theta(x\given z)p(z)\dd z$ is. The
+\emph{variational posterior} (or encoder, or recognition kernel)
+$q_\phi(z\given x)$ is a second Markov kernel, parameterized by $\phi$,
+introduced to approximate it. The expectation $\E_{q_\phi(z\given x)}[\cdot]$
+is the integral $\int(\cdot)\,q_\phi(\dd z\given x)$ against that kernel ---
+a conditional expectation under $q$, in the sense of~\eqref{eq:ce-via-rcd}.
+\end{mlentry}
+
+\begin{proposition}[Evidence lower bound and its gap]\label{prop:elbo}
+For any kernel $q_\phi(\cdot\given x)\ll p_\theta(\cdot\given x)$,
+\begin{equation}\label{eq:elbo}
+  \log p_\theta(x)
+  \;=\;\underbrace{\E_{q_\phi(z\given x)}\!\Bigl[\log\frac{p_\theta(x,z)}
+        {q_\phi(z\given x)}\Bigr]}_{\displaystyle \mathrm{ELBO}(\theta,\phi;x)}
+   \;+\;\KL\!\bigl(q_\phi(\cdot\given x)\,\big\|\,p_\theta(\cdot\given x)\bigr),
+\end{equation}
+and since the KL term is $\ge 0$, $\mathrm{ELBO}(\theta,\phi;x)\le\log
+p_\theta(x)$ with equality iff $q_\phi(\cdot\given x)=p_\theta(\cdot\given
+x)$. Equivalently
+\begin{equation}\label{eq:elbo-split}
+  \mathrm{ELBO}(\theta,\phi;x)
+  =\E_{q_\phi(z\given x)}\!\bigl[\log p_\theta(x\given z)\bigr]
+   -\KL\!\bigl(q_\phi(\cdot\given x)\,\big\|\,p(\cdot)\bigr).
+\end{equation}
+\end{proposition}
+\begin{proof}
+Insert $1=q_\phi(z\given x)/q_\phi(z\given x)$ into $\log
+p_\theta(x)=\log\int p_\theta(x,z)\dd z$ is not valid directly; instead
+write $\log p_\theta(x)=\E_{q_\phi(z\given x)}[\log p_\theta(x)]$ (the
+integrand is constant in $z$), expand $\log p_\theta(x)=\log
+p_\theta(x,z)-\log p_\theta(z\given x)$, and add and subtract $\log
+q_\phi(z\given x)$. The two resulting expectations are the ELBO and the KL.
+Equation~\eqref{eq:elbo-split} regroups $p_\theta(x,z)=p_\theta(x\given
+z)p(z)$.
+\end{proof}
+
+\begin{remark}[Three bars, three different objects, one equation]
+Equation~\eqref{eq:elbo} contains the encoder kernel $q_\phi(z\given x)$, the
+decoder kernel $p_\theta(x\given z)$, and the exact-posterior kernel
+$p_\theta(z\given x)$ --- three distinct Markov kernels, written with the
+same bar. The variational gap is the \emph{reverse} KL
+$\KL(q_\phi\|p_\theta(\cdot\given x))$, the mode-seeking direction; this is
+why VAEs are prone to posterior collapse and under-dispersed encoders. The
+mathematician's reading of ``maximize the ELBO'' is: minimize, over $\phi$,
+the reverse conditional KL between two kernels, simultaneously fitting
+$\theta$ by a lower bound on the marginal log-likelihood.
+\end{remark}
+
+\chapter{Sequential, diffusion, and reinforcement bars}
+
+\section{Autoregressive models: the chain rule is not an assumption}
+\label{sec:autoreg}
+
+\begin{mlentry}{$p(x_{1:T})=\prod_{t=1}^T p(x_t\given x_{<t})$.}
+For any random vector $(X_1,\dots,X_T)$ into standard Borel spaces, the
+\emph{chain rule of probability} gives regular conditional distributions
+$P_{X_t\given X_{<t}}$ with
+\begin{equation}\label{eq:chain-prob}
+  P_{X_{1:T}}(\dd x_{1:T})
+   \;=\;\prod_{t=1}^T P_{X_t\given X_{<t}}(\dd x_t\given x_{<t}),
+\end{equation}
+by iterating disintegration (Theorem~\ref{thm:disintegration}) $T-1$ times.
+Unlike a graphical-model factorization, \eqref{eq:chain-prob} holds for
+\emph{every} joint law: it is an identity, not a modeling assumption. An
+``autoregressive model'' replaces each true kernel by a learned kernel
+$p_\theta(x_t\given x_{<t})$ (the softmax over a vocabulary in a language
+model, a mixture or a logistic in a density model), and its NLL training
+loss is the conditional cross-entropy summed over positions.
+\end{mlentry}
+
+\begin{remark}
+What the model assumes is never the factorization~\eqref{eq:chain-prob} but
+the \emph{parametric form and conditioning set} of each kernel: a finite
+context window, a particular network, weight sharing across $t$. The bar in
+$p(x_t\given x_{<t})$ is doing the honest work of
+Theorem~\ref{thm:disintegration}; the modeling lives in the function class,
+not in the conditioning.
+\end{remark}
+
+\section{Markov chains, transition kernels, and diffusion}
+\label{sec:markov-diffusion}
+
+\begin{mlentry}{$q(x_t\given x_{t-1})$,\quad $p_\theta(x_{t-1}\given x_t)$,\quad
+$\nabla_x\log p_t(x)$,\quad $\nabla_x\log p_t(x\given y)$.}
+A (time-inhomogeneous) Markov chain is a prior $p_0$ together with
+transition kernels $\kappa_t(x_{t-1},\dd x_t)$; its law is the kernel
+product of Remark~\ref{rem:kernel-compose}, and the Markov property is the
+conditional independence $X_t\indep X_{<t-1}\given X_{t-1}$ of
+Definition~\ref{def:ci}. A \emph{diffusion model} fixes a forward chain
+$q(x_t\given x_{t-1})$ that gradually adds noise and learns a reverse chain
+$p_\theta(x_{t-1}\given x_t)$; the training loss is a sum of conditional
+KL terms~\eqref{eq:cond-kl}
+$\KL\bigl(q(x_{t-1}\given x_t,x_0)\,\|\,p_\theta(x_{t-1}\given x_t)\bigr)$
+averaged over the forward law, telescoped via the chain rule for
+KL~\eqref{eq:kl-chain} into a bound on $-\log p_\theta(x_0)$.
+\end{mlentry}
+
+\begin{definition}[Score]
+The \emph{(Stein) score} of a density $p_t$ on $\R^d$ is the gradient of its
+log-density in the \emph{state}, $s_t(x)\defeq\nabla_x\log p_t(x)$ ---
+\emph{not} a derivative in any parameter. It is invariant to the normalizing
+constant of $p_t$, which is why score-based models can sidestep intractable
+partition functions.
+\end{definition}
+
+\begin{proposition}[Conditional score and Bayes; the two guidances]
+\label{prop:guidance}
+For a joint $p_t(x,y)=p_t(x)\,p_t(y\given x)$ on $\R^d\times\Ycal$ with $y$
+held fixed, differentiating $\log p_t(x\given y)=\log p_t(x)+\log
+p_t(y\given x)-\log p_t(y)$ in $x$ gives the \emph{conditional score
+decomposition}
+\begin{equation}\label{eq:cond-score}
+  \nabla_x\log p_t(x\given y)
+  \;=\;\underbrace{\nabla_x\log p_t(x)}_{\text{unconditional score}}
+   \;+\;\underbrace{\nabla_x\log p_t(y\given x)}_{\text{classifier gradient}} ,
+\end{equation}
+since $\nabla_x\log p_t(y)=0$. \emph{Classifier guidance} implements
+\eqref{eq:cond-score} literally, adding the gradient of an auxiliary
+classifier $p_t(y\given x)$. \emph{Classifier-free guidance} instead trains
+one network to output both the conditional and unconditional scores
+$s_\theta(x,y),s_\theta(x,\varnothing)$ and forms the guided field
+\begin{equation}\label{eq:cfg}
+  \widetilde s_\theta(x,y)
+   \;=\;(1+w)\,s_\theta(x,y)\;-\;w\,s_\theta(x,\varnothing)
+   \;=\;s_\theta(x,y)+w\bigl(s_\theta(x,y)-s_\theta(x,\varnothing)\bigr),
+\end{equation}
+with guidance weight $w\ge0$; the bracket is exactly the classifier
+gradient $\nabla_x\log p_t(y\given x)$ of~\eqref{eq:cond-score}, so
+$w=0$ recovers the true conditional score and $w>0$ samples from a
+sharpened, tempered conditional $\propto p_t(x)\,p_t(y\given x)^{1+w}$.
+\end{proposition}
+
+\begin{remark}[A bar that is a gradient of a log of a kernel]
+The symbol $\nabla_x\log p_t(x\given y)$ stacks three of this handbook's
+constructions: a conditional density $p_t(x\given y)$
+(Definition~\ref{def:cond-density}) indexed by a diffusion time $t$, its
+logarithm, and a gradient in the \emph{conditioned} variable $x$.
+Equation~\eqref{eq:cond-score} is just Bayes' rule
+(Proposition~\ref{prop:bayes}) after a logarithm and a gradient --- the
+single most important ``conditional thing'' in modern generative modeling,
+and entirely elementary once each piece is named.
+\end{remark}
+
+\section{Policies, value functions, and the Bellman bar}\label{sec:rl}
+
+\begin{mlentry}{$\pi(a\given s)$,\quad $V^\pi(s)=\E_\pi[\sum_t\gamma^t r_t\given S_0=s]$,\quad
+$Q^\pi(s,a)$.}
+A \emph{policy} $\pi(a\given s)$ is a Markov kernel from states to actions
+(Definition~\ref{def:kernel}); together with the environment's transition
+kernel $P(s'\given s,a)$ and reward it defines a law on trajectories. The
+\emph{value function}
+\begin{equation}\label{eq:value}
+  V^\pi(s)\;\defeq\;\E_\pi\Bigl[\textstyle\sum_{t\ge0}\gamma^t R_t
+     \,\Big|\,S_0=s\Bigr],\qquad
+  Q^\pi(s,a)\;\defeq\;\E_\pi\Bigl[\textstyle\sum_{t\ge0}\gamma^t R_t
+     \,\Big|\,S_0=s,A_0=a\Bigr],
+\end{equation}
+is an evaluated conditional expectation (Definition~\ref{def:eval-ce}) of a
+discounted total reward; ``$\given S_0=s$'' is the conditioning-on-a-
+random-variable of Chapter~\ref{ch:cond-on-rv}, well defined for $P_{S_0}$-a.e.\ $s$.
+\end{mlentry}
+
+\begin{proposition}[Bellman equation as the tower rule]\label{prop:bellman}
+With the per-step conditional expectation over $A_0\sim\pi(\cdot\given s)$,
+$S_1\sim P(\cdot\given s,A_0)$,
+\begin{equation}\label{eq:bellman}
+  V^\pi(s)\;=\;\E_{\pi}\bigl[\,R_0+\gamma\,V^\pi(S_1)\,\big|\,S_0=s\,\bigr].
+\end{equation}
+\end{proposition}
+\begin{proof}
+Split the geometric sum in~\eqref{eq:value} as
+$R_0+\gamma\sum_{t\ge0}\gamma^t R_{t+1}$, and apply the tower
+rule~\eqref{eq:tower} conditioning the tail on $(S_1,A_1,\dots)$ through
+$S_1$; the Markov property collapses the tail's conditional expectation to
+$V^\pi(S_1)$.
+\end{proof}
+
+So the Bellman equation --- the fixed-point identity behind value
+iteration, $Q$-learning, and temporal-difference methods --- is nothing but
+the tower property of conditional expectation
+(Proposition~\ref{prop:ce-props}(4)) applied to a Markov reward process.
+Every ``bootstrapping'' target $r+\gamma V(s')$ is a one-step conditional
+expectation standing in for the full return.
+
+\section{Filtrations and the martingale bar}
+
+\begin{mlentry}{$\Fcal_t$,\quad $\E[X_{t+1}\given\Fcal_t]$,\quad
+$\E[X_{t+1}\given\Fcal_t]=X_t$.}
+A \emph{filtration} $(\Fcal_t)_{t\ge0}$ is an increasing family of
+sub-$\sigma$-algebras, $\Fcal_s\subseteq\Fcal_t\subseteq\Fcal$ for $s\le
+t$: ``the information available by time $t$.'' This is conditioning on a
+$\sigma$-algebra (Definition~\ref{def:cond-exp}) in its purest form, with
+no random variable to disintegrate against. A process is a
+\emph{martingale} if it is adapted, integrable, and
+$\E[X_{t+1}\given\Fcal_t]\eqas X_t$. Stochastic-approximation and SGD
+convergence proofs are written in this language: the noise sequence is a
+martingale-difference, $\E[\xi_{t+1}\given\Fcal_t]=0$, and the tower rule
+plus a supermartingale convergence theorem do the rest.
+\end{mlentry}
+
+\begin{remark}[Why $\Fcal_t$ and not ``$\given\text{the past}$'']
+Writing $\E[X_{t+1}\given\Fcal_t]$ rather than $\E[X_{t+1}\given
+X_0,\dots,X_t]$ is the deliberately more general move: $\Fcal_t$ may encode
+side information beyond the past values of $X$, and the conditional
+expectation is defined directly on the $\sigma$-algebra without ever
+choosing a conditioning random variable. For a mathematician this is the
+\emph{cleanest} conditional bar in all of ML --- it is exactly
+Definition~\ref{def:cond-exp}, untranslated.
+\end{remark}
+
+\chapter{A field guide to notational pitfalls}\label{ch:pitfalls}
+
+We close the dictionary with the ambiguities that most often trip a
+mathematician, each cross-referenced to its resolution.
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=0.5em]
+\item \textbf{The bar is overloaded.} $\Prob(A\given B)$ conditions on an
+\emph{event} (Definition~\ref{def:elem-cond}); $\E[X\given\Gcal]$ on a
+\emph{$\sigma$-algebra} (Definition~\ref{def:cond-exp}); $\E[X\given Y]$ on
+a \emph{random variable} (Chapter~\ref{ch:cond-on-rv}); $\E[X\given Y=y]$ is
+a \emph{function evaluated} (Definition~\ref{def:eval-ce}); $p(x\given y)$ a
+\emph{kernel/density} (Definition~\ref{def:cond-density}). Identify which
+before reading on.
+
+\item \textbf{Random variable vs.\ number.} $\E[X\given Y]$ is a random
+variable; $\E[X\given Y=y]$ is a (version of a) deterministic function.
+Identities about the latter hold only for $P_Y$-a.e.\ $y$
+(Warning~\ref{warn:version}).
+
+\item \textbf{``$=$'' usually means ``$\eqas$''.} Conditional objects are
+equivalence classes modulo null sets. A clean-looking equation between
+conditional expectations is an almost-sure statement unless a specific
+version (e.g.\ a regular kernel) has been fixed.
+
+\item \textbf{Same letter $p$, different functions.} $p(x)$, $p(y)$,
+$p(x,y)$, $p(x\given y)$ are distinct functions disambiguated only by their
+argument names. Restore subscripts $p_X,p_Y,p_{X,Y},p_{X\given Y}$ when in
+doubt.
+
+\item \textbf{Semicolon vs.\ bar.} $p(x;\theta)$ / $p_\theta(x)$
+(frequentist index, no measure on $\Theta$) vs.\ $p(x\given\theta)$
+(Bayesian, $\theta$ random). Only the latter licenses a posterior
+$p(\theta\given x)$.
+
+\item \textbf{Reference measure is implicit.} ``Density'' always means
+``density with respect to \emph{some} $\lambda$'' --- usually Lebesgue or
+counting. Differential entropy and change-of-variables (normalizing flows!)
+are sensitive to this choice; mutual information and KL are not
+(Warning~\ref{warn:diffent}).
+
+\item \textbf{Conditioning on a null event needs a family.} A single
+$p(\cdot\given Y=y)$ is meaningless detached from the disintegrating
+variable $Y$; the Borel--Kolmogorov paradox (Section~\ref{sec:bk-paradox})
+is the price of forgetting this.
+
+\item \textbf{KL direction matters.} $\KL(p\|q)$ (maximum likelihood,
+mode-covering) and $\KL(q\|p)$ (variational inference, mode-seeking) are
+different objectives with different failure modes
+(Warning~\ref{warn:diffent}'s box, Remark~\ref{prop:elbo}'s discussion).
+
+\item \textbf{$\nabla$ in which variable?} In $\nabla_x\log p_t(x\given y)$
+the gradient is in the \emph{state} $x$ (a score), not in parameters
+$\theta$; in $\nabla_\theta\log p_\theta(x)$ it is in parameters (for
+gradient ascent). The subscript on $\nabla$ is not decoration.
+
+\item \textbf{Expectation subscripts name a measure.} $\E_{x\sim
+p(\cdot\given y)}[\,\cdot\,]$ integrates against the kernel
+$p(\cdot\given y)$ at fixed $y$ (a conditional expectation); $\E_{x,y}$
+integrates against the joint. Reading off the subscript tells you which
+measure and hence which Fubini step is legal.
+\end{enumerate}
+
+% =====================================================================
+\appendix
+\part*{Appendices}
+\addcontentsline{toc}{part}{Appendices}
+% =====================================================================
+
+\chapter{The theorems relied upon}\label{app:theorems}
+
+For completeness we record, without proof, the three measure-theoretic
+results that do all the heavy lifting above, plus the topological hypothesis
+under which conditional distributions exist. Standard references are
+Durrett, \emph{Probability: Theory and Examples}; Kallenberg,
+\emph{Foundations of Modern Probability}; and Çınlar, \emph{Probability and
+Stochastics}.
+
+\begin{theorem}[Radon--Nikodym]\label{thm:rn}
+Let $\mu,\nu$ be $\sigma$-finite measures on $(\Omega,\Fcal)$ with
+$\nu\ll\mu$ (i.e.\ $\mu(A)=0\Rightarrow\nu(A)=0$). Then there is an
+$\Fcal$-measurable $f\ge0$, unique up to $\mu$-a.e.\ equality, with
+$\nu(A)=\int_A f\dd\mu$ for all $A\in\Fcal$. One writes $f=\dd\nu/\dd\mu$.
+\end{theorem}
+
+This is the engine of Theorem~\ref{thm:ce-exists}: conditional expectation
+\emph{is} a Radon--Nikodym derivative, taken on the sub-$\sigma$-algebra
+$\Gcal$. Conditional densities (Definition~\ref{def:cond-density}) and the
+KL integrand $\log(\dd P/\dd Q)$ (Definition~\ref{def:kl}) are likewise
+Radon--Nikodym derivatives.
+
+\begin{theorem}[Doob--Dynkin lemma]\label{thm:dd-app}
+Let $Y:\Omega\to\Ycal$ and $Z:\Omega\to\R$ be measurable with $\Ycal$
+standard Borel. Then $Z$ is $\sigma(Y)$-measurable iff $Z=g\circ Y$ for some
+Borel $g:\Ycal\to\R$.
+\end{theorem}
+
+This is what turns $\E[X\given Y]$ (a $\sigma(Y)$-measurable random
+variable) into a function $g$ of $y$, hence into the symbol $\E[X\given
+Y=y]$ and the regression function (Chapter~\ref{ch:cond-on-rv}).
+
+\begin{definition}[Standard Borel space]\label{def:std-borel}
+A measurable space $(\Xcal,\Bcal)$ is \emph{standard Borel} if it is Borel
+isomorphic to a Borel subset of a Polish (separable, completely
+metrizable) space with its Borel $\sigma$-algebra. Equivalently, it is
+isomorphic to one of: a finite or countable discrete set, or $\R$ (the
+Borel isomorphism theorem). All of $\R^d$, separable Banach and Hilbert
+spaces, compact metric spaces, $\{0,1\}^\N$, and spaces of probability
+measures with the weak topology are standard Borel.
+\end{definition}
+
+\begin{theorem}[Existence of regular conditional distributions / disintegration]
+\label{thm:disint-app}
+Let $X:\Omega\to\Xcal$, $Y:\Omega\to\Ycal$ be random variables with $\Xcal$
+standard Borel. Then a regular conditional distribution $\kappa(y,\dd x)$ of
+$X$ given $Y$ exists (Definition~\ref{def:rcd}), is $P_Y$-a.e.\ unique, and
+disintegrates the joint law as
+$P_{X,Y}(\dd x,\dd y)=\kappa(y,\dd x)\,P_Y(\dd y)$
+(Theorem~\ref{thm:disintegration}). The standard-Borel hypothesis on
+$\Xcal$ is essential; it fails for general measurable spaces.
+\end{theorem}
+
+This single hypothesis --- announced as a standing convention in the
+Preface and satisfied by every space occurring in practice --- is what makes
+the entire conditional vocabulary of machine learning well defined. With it,
+$p(x\given y)$, $\pi(a\given s)$, $q_\phi(z\given x)$, and every other bar
+in this handbook denotes an object that provably exists.
+
+\chapter{Notation cheat sheet}\label{app:cheatsheet}
+
+\renewcommand{\arraystretch}{1.45}
+\begin{longtable}{@{} p{0.30\textwidth} p{0.62\textwidth} @{}}
+\toprule
+\textbf{Symbol (as printed)} & \textbf{Rigorous meaning / where defined}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Symbol (as printed)} & \textbf{Rigorous meaning / where defined}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+$\Prob(A\given B)$ &
+  Elementary conditional probability, $\Prob(A\cap B)/\Prob(B)$, needs
+  $\Prob(B)>0$. Def.~\ref{def:elem-cond}.\\
+$\E[X\given\Gcal]$ &
+  Conditional expectation: the $\Gcal$-measurable r.v.\ with matching local
+  averages; a Radon--Nikodym derivative; the $L^2$-projection onto
+  $L^2(\Gcal)$. Def.~\ref{def:cond-exp}.\\
+$\E[X\given Y]$ &
+  $=\E[X\given\sigma(Y)]$, a $\sigma(Y)$-measurable random variable; equals
+  $g(Y)$ by Doob--Dynkin. Ch.~\ref{ch:cond-on-rv}.\\
+$\E[X\given Y=y]$ &
+  $=g(y)$, a deterministic function defined for $P_Y$-a.e.\ $y$ only.
+  Def.~\ref{def:eval-ce}, Warning~\ref{warn:version}.\\
+$\Prob(A\given\Gcal)$, $\Prob(A\given Y)$ &
+  $\E[\one_A\given\Gcal]$; per-event a.s.-defined random variable.
+  Def.~\ref{def:cond-prob-sigma}.\\
+$\Var(X\given Y)$ &
+  Conditional variance; obeys the law of total variance~\eqref{eq:total-var}.
+  Def.~\ref{def:cond-var}.\\
+$P_{X\given Y}(\cdot\given y)$, $\kappa(y,\dd x)$ &
+  Regular conditional distribution / Markov kernel; exists on standard Borel
+  spaces. Defs.~\ref{def:kernel},~\ref{def:rcd}; Thm.~\ref{thm:rcd-exists}.\\
+$p(x\given y)$ &
+  Conditional density $=p_{X,Y}(x,y)/p_Y(y)$ w.r.t.\ a reference measure;
+  a density of the r.c.d. Def.~\ref{def:cond-density}.\\
+$p(\theta\given\Dcal)$ &
+  Posterior $=$ likelihood $\times$ prior $/$ evidence (Bayes' rule).
+  Prop.~\ref{prop:bayes}; \S\ref{sec:posterior}.\\
+$X\indep Y\given Z$ &
+  Conditional independence; kernel/conditional-expectation/density
+  factorization; $\iff \MI(X;Y\given Z)=0$. Def.~\ref{def:ci}.\\
+$H(X\given Y)$ &
+  Conditional entropy $=\E_Y[H(P_{X\given Y}(\cdot\given Y))]$; expected
+  entropy of the r.c.d. Def.~\ref{def:cond-entropy}.\\
+$I(X;Y\given Z)$ &
+  Conditional mutual information; expected per-fibre KL; $\ge0$, $=0\iff
+  X\indep Y\given Z$. Def.~\ref{def:mi}.\\
+$\KL(P\|Q)$ &
+  Relative entropy $\int\log(\dd P/\dd Q)\dd P$ if $P\ll Q$, else $+\infty$;
+  asymmetric. Def.~\ref{def:kl}.\\
+$\KL(P_{X\given Y}\|Q_{X\given Y}\,|\,P_Y)$ &
+  Conditional / expected KL; the per-step diffusion loss.
+  Def.~\ref{def:cond-kl}.\\
+$q_\phi(z\given x)$ &
+  Variational posterior / encoder kernel; approximates $p_\theta(z\given x)$.
+  \S\ref{sec:elbo}.\\
+$\E_{q_\phi(z\given x)}[\cdot]$ &
+  Integral against the kernel $q_\phi(\cdot\given x)$ at fixed $x$; a
+  conditional expectation under $q$. Eq.~\eqref{eq:ce-via-rcd}.\\
+$\prod_t p(x_t\given x_{<t})$ &
+  Chain rule of probability (an identity, by iterated disintegration), not a
+  modeling assumption. \S\ref{sec:autoreg}.\\
+$\prod_i p(x_i\given x_{\mathrm{pa}(i)})$ &
+  Bayesian-network factorization over a DAG (a Markov assumption).
+  Def.~\ref{def:bn}; Thm.~\ref{thm:bn-markov}.\\
+$q(x_t\given x_{t-1})$, $p_\theta(x_{t-1}\given x_t)$ &
+  Forward / reverse diffusion transition kernels (Markov chain).
+  \S\ref{sec:markov-diffusion}.\\
+$\nabla_x\log p_t(x)$ &
+  Stein score (gradient in state, not parameters); normalizer-free.
+  \S\ref{sec:markov-diffusion}.\\
+$\nabla_x\log p_t(x\given y)$ &
+  Conditional score $=\nabla_x\log p_t(x)+\nabla_x\log p_t(y\given x)$
+  (Bayes). Prop.~\ref{prop:guidance}.\\
+$\pi(a\given s)$ &
+  Policy: a Markov kernel from states to actions. \S\ref{sec:rl}.\\
+$V^\pi(s)=\E_\pi[\sum_t\gamma^t R_t\given S_0=s]$ &
+  Value: evaluated conditional expectation of discounted return; Bellman $=$
+  tower rule. Eqs.~\eqref{eq:value},~\eqref{eq:bellman}.\\
+$\E[X_{t+1}\given\Fcal_t]$ &
+  Conditioning on a filtration $\sigma$-algebra; martingale if $\eqas X_t$.
+  \S\ref{ch:pitfalls} entry, Def.~\ref{def:cond-exp}.\\
+\end{longtable}
+
+\vspace{0.5em}
+\noindent\emph{One rule to carry away:} a bar is always one of three things
+--- a conditional expectation (a projection / Radon--Nikodym derivative on
+a $\sigma$-algebra), a Markov kernel (a measurably-indexed family of
+measures), or a conditional density (the Radon--Nikodym derivative of that
+kernel against a reference measure). Decide which, and the notation stops
+being ambiguous.
+
+\end{document}
